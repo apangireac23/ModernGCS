@@ -160,3 +160,8 @@ class GCSSettings:
 
 # Global settings instance
 settings = GCSSettings()
+
+# Backwards-compatibility alias expected by main.py
+class Settings(GCSSettings):
+    pass
+

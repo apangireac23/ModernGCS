@@ -5,7 +5,7 @@ Flight instruments widget showing attitude, compass, etc.
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                             QLabel, QGroupBox, QFrame)
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPointF
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QPolygonF, QFont
 import math
 
@@ -51,12 +51,18 @@ class AttitudeIndicator(QWidget):
         painter.translate(cx, cy)
         painter.rotate(math.degrees(self.roll))
 
+        # Assign coordinates for the polygon
+        x1, y1 = 0, 0
+        x2, y2 = 100, 0
+        x3, y3 = 100, 100
+        x4, y4 = 0, 100
+
         # Draw sky (blue)
         sky_rect = QPolygonF([
-            [-radius*2, -radius*2],
-            [radius*2, -radius*2],
-            [radius*2, 0],
-            [-radius*2, 0]
+            QPointF(x1, y1),
+            QPointF(x2, y2),
+            QPointF(x3, y3),
+            QPointF(x4, y4)
         ])
         painter.fillPath(sky_rect, QColor(135, 206, 235))
 
@@ -150,8 +156,8 @@ class CompassRose(QWidget):
         radius = size / 2 - 10
 
         # Draw outer circle
-        painter.setPen(QPen(QColor.black, 2))
-        painter.setBrush(QBrush(QColor.white))
+        painter.setPen(QPen(QColor(Qt.GlobalColor.black), 2))
+        painter.setBrush(QBrush(QColor(Qt.GlobalColor.white)))    
         painter.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2)
 
         painter.save()

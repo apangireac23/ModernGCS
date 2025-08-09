@@ -5,6 +5,13 @@ ModernGCS - A modern Ground Control Station for ArduPilot
 
 import sys
 import os
+
+# Force a stable Qt platform plugin to avoid Wayland symbol issues on some distros/WSL
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+elif sys.platform.startswith("win"):
+    os.environ.setdefault("QT_QPA_PLATFORM", "windows")
+
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QSplitter, QMenuBar, QStatusBar, 
                             QMessageBox, QTabWidget)
@@ -12,7 +19,10 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon
 
 # Add src to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+project_root = os.path.dirname(os.path.abspath(__file__))
+src_path = os.path.join(project_root, "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
 from communication.mavlink_handler import MAVLinkHandler
 from ui.connection_dialog import ConnectionDialog
@@ -22,7 +32,7 @@ from ui.status_widget import StatusWidget
 from ui.flight_instruments import FlightInstrumentsWidget
 from utils.settings import Settings
 
-
+ENABLE_FLIGHT_INSTRUMENTS = False  # Set to True to enable, False to disable
 class ModernGCS(QMainWindow):
     """Main application window"""
 
@@ -48,64 +58,65 @@ class ModernGCS(QMainWindow):
         """Initialize user interface"""
         self.setWindowTitle("ModernGCS - Ground Control Station")
         self.setGeometry(100, 100, 1400, 900)
-
-        # Create menu bar
-        self.create_menu_bar()
-
+    
         # Create status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Disconnected", 0)
-
+    
         # Create central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
+    
         # Main layout
         main_layout = QHBoxLayout(central_widget)
-
+    
         # Create splitter for resizable panels
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(main_splitter)
-
+    
         # Left panel - controls and status
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
         left_widget.setMaximumWidth(350)
         left_widget.setMinimumWidth(300)
-
+    
         # Vehicle controls
         self.vehicle_control = VehicleControlWidget()
         left_layout.addWidget(self.vehicle_control)
-
+    
         # Status widget
         self.status_widget = StatusWidget()
         left_layout.addWidget(self.status_widget)
-
+    
         left_layout.addStretch()
         main_splitter.addWidget(left_widget)
-
+    
         # Center panel - map
         self.map_widget = MapWidget()
         main_splitter.addWidget(self.map_widget)
-
+    
         # Right panel - instruments
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_widget.setMaximumWidth(350)
         right_widget.setMinimumWidth(300)
-
+    
         # Flight instruments
-        self.flight_instruments = FlightInstrumentsWidget()
-        right_layout.addWidget(self.flight_instruments)
-
-        right_layout.addStretch()
-        main_splitter.addWidget(right_widget)
-
+        if ENABLE_FLIGHT_INSTRUMENTS:
+            self.flight_instruments = FlightInstrumentsWidget()
+            right_layout.addWidget(self.flight_instruments)
+        
+            right_layout.addStretch()
+            main_splitter.addWidget(right_widget)
+            
         # Set splitter proportions
         main_splitter.setStretchFactor(0, 0)  # Left panel - fixed
         main_splitter.setStretchFactor(1, 1)  # Center panel - expandable
         main_splitter.setStretchFactor(2, 0)  # Right panel - fixed
+    
+        # Create menu bar AFTER widgets are created
+        self.create_menu_bar()
 
     def create_menu_bar(self):
         """Create menu bar"""
@@ -206,7 +217,7 @@ class ModernGCS(QMainWindow):
         self.status_widget.update_from_message(message)
 
         # Update flight instruments
-        self.flight_instruments.update_from_message(message)
+        # self.flight_instruments.update_from_message(message)
 
         # Update map widget
         self.map_widget.update_from_message(message)

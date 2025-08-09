@@ -92,6 +92,8 @@ class MapWidget(QWidget):
     waypoint_moved = pyqtSignal(int, object)  # index, Waypoint
     waypoint_removed = pyqtSignal(int)  # index
     map_clicked = pyqtSignal(float, float)  # lat, lon
+    # Compatibility signal expected by main.py (command, waypoints)
+    waypoint_signal = pyqtSignal(str, list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -184,6 +186,31 @@ class MapWidget(QWidget):
         self.vehicle_heading = heading
         self.show_vehicle = True
         self.update()
+
+    def update_from_message(self, message):
+        """Compatibility handler used by main.py to forward MAVLink messages"""
+        try:
+            msg_type = message.get_type()
+        except Exception:
+            return
+
+        if msg_type == 'GLOBAL_POSITION_INT':
+            try:
+                lat = message.lat / 1e7
+                lon = message.lon / 1e7
+                self.update_vehicle_position(lat, lon, self.vehicle_heading)
+            except Exception:
+                pass
+        elif msg_type == 'ATTITUDE':
+            try:
+                # yaw is in radians; convert to degrees for drawing
+                yaw = getattr(message, 'yaw', 0.0)
+                heading_deg = (np.degrees(yaw) if 'np' in globals() else (yaw * 180.0 / 3.141592653589793)) % 360
+                self.vehicle_heading = heading_deg
+                # Trigger repaint
+                self.update()
+            except Exception:
+                pass
 
     def hide_vehicle(self):
         """Hide vehicle from map"""
@@ -449,3 +476,23 @@ class MapWidget(QWidget):
         """Handle resize events"""
         super().resizeEvent(event)
         self._load_visible_tiles()
+
+    def refresh(self):
+        """Refresh the map by clearing tiles and reloading"""
+        # Clear existing tiles
+        self.tiles.clear()
+        
+        # Stop current tile loader if running
+        if self.tile_loader.isRunning():
+            self.tile_loader.stop()
+            
+        # Create new tile loader with current server URL
+        self.tile_loader = MapTileLoader(self.tile_server_url)
+        self.tile_loader.tile_loaded.connect(self._on_tile_loaded)
+        self.tile_loader.loading_error.connect(self._on_tile_error)
+        
+        # Reload visible tiles
+        self._load_visible_tiles()
+        
+        # Force a repaint
+        self.update()

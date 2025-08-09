@@ -161,3 +161,7 @@ class ConnectionDialog(QDialog):
             }
 
         return {}
+
+    # Backward-compatible alias used by main.py
+    def get_connection_config(self):
+        return self.get_connection_info()
