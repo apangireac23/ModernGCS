@@ -2,6 +2,8 @@
 
 A modern Ground Control Station for ArduPilot vehicles built with Python and PyQt6.
 
+![ModernGCS Screenshot](images/ModernGCS.png)
+
 ## Features
 
 - **Multiple Connection Types**: Serial, TCP, UDP connections to vehicles
